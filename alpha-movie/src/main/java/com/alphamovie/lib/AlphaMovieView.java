@@ -17,24 +17,21 @@
 package com.alphamovie.lib;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.TypedArray;
-import android.media.MediaDataSource;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
-import android.net.Uri;
+import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Surface;
 
-import java.io.FileDescriptor;
+import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 
 @SuppressLint("ViewConstructor")
-public class AlphaMovieView extends GLTextureView {
+public class AlphaMovieView extends GLSurfaceView {
 
     private static final int GL_CONTEXT_VERSION = 2;
 
@@ -48,6 +45,7 @@ public class AlphaMovieView extends GLTextureView {
 
     VideoRenderer renderer;
     private MediaPlayer mediaPlayer;
+    private MediaPlayer mediaPlayerBg;
 
     private OnVideoStartedListener onVideoStartedListener;
     private OnVideoEndedListener onVideoEndedListener;
@@ -56,6 +54,14 @@ public class AlphaMovieView extends GLTextureView {
     private boolean isDataSourceSet;
 
     private PlayerState state = PlayerState.NOT_PREPARED;
+    private PlayerState stateBg = PlayerState.NOT_PREPARED;
+
+    private PlayMovieThread mMovieThread;
+    private PlayMovieThread mMovieBgThread;
+    private String moviePath;
+    private String movieBgPath;
+    private Surface movieSurface;
+    private Surface movieBgSurface;
 
     public AlphaMovieView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -80,13 +86,13 @@ public class AlphaMovieView extends GLTextureView {
 
         bringToFront();
         setPreserveEGLContextOnPause(true);
-        setOpaque(false);
+//        setOpaque(false);
     }
 
     private void initMediaPlayer() {
         mediaPlayer = new MediaPlayer();
-        setScreenOnWhilePlaying(true);
-        setLooping(true);
+//        setScreenOnWhilePlaying(true);
+//        setLooping(true);
 
         mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
@@ -95,6 +101,17 @@ public class AlphaMovieView extends GLTextureView {
                 if (onVideoEndedListener != null) {
                     onVideoEndedListener.onVideoEnded();
                 }
+            }
+        });
+
+        mediaPlayerBg = new MediaPlayer();
+        mediaPlayerBg.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                stateBg = PlayerState.PAUSED;
+//                if (onVideoEndedListener != null) {
+//                    onVideoEndedListener.onVideoEnded();
+//                }
             }
         });
     }
@@ -122,10 +139,17 @@ public class AlphaMovieView extends GLTextureView {
         if (renderer != null) {
             renderer.setOnSurfacePrepareListener(new VideoRenderer.OnSurfacePrepareListener() {
                 @Override
-                public void surfacePrepared(Surface surface) {
+                public void surfacePrepared(Surface surface, Surface bgSurface) {
                     isSurfaceCreated = true;
                     mediaPlayer.setSurface(surface);
                     surface.release();
+
+                    mediaPlayerBg.setSurface(bgSurface);
+                    bgSurface.release();
+
+//                    movieSurface = surface;
+//                    movieBgSurface = bgSurface;
+
                     if (isDataSourceSet) {
                         prepareAndStartMediaPlayer();
                     }
@@ -135,12 +159,42 @@ public class AlphaMovieView extends GLTextureView {
     }
 
     private void prepareAndStartMediaPlayer() {
+//        new PlayMovieThread()
+
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                prepareAsync(new MediaPlayer.OnPreparedListener() {
+//                    @Override
+//                    public void onPrepared(MediaPlayer mp) {
+//                        start();
+//                    }
+//                });
+//            }
+//        }).start();
         prepareAsync(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer mp) {
                 start();
             }
         });
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+                prepareAsyncBg(new MediaPlayer.OnPreparedListener() {
+                    @Override
+                    public void onPrepared(MediaPlayer mp) {
+                        startBg();
+                    }
+                });
+//            }
+//        }).start();
+
+//        mMovieThread = new PlayMovieThread(new File(moviePath), movieSurface, new SpeedControlCallback());
+//        mMovieBgThread = new PlayMovieThread(new File(movieBgPath), movieBgSurface, new SpeedControlCallback());
+
+//        movieSurface.release();
+//        movieBgSurface.release();
     }
 
     private void calculateVideoAspectRatio(int videoWidth, int videoHeight) {
@@ -182,7 +236,7 @@ public class AlphaMovieView extends GLTextureView {
         }
     }
 
-    public void setVideoFromAssets(String assetsFileName) {
+    public void setVideoFromAssets(String assetsFileName, String assetsFileNameBg) {
         reset();
 
         try {
@@ -192,87 +246,145 @@ public class AlphaMovieView extends GLTextureView {
             MediaMetadataRetriever retriever = new MediaMetadataRetriever();
             retriever.setDataSource(assetFileDescriptor.getFileDescriptor(), assetFileDescriptor.getStartOffset(), assetFileDescriptor.getLength());
 
-            onDataSourceSet(retriever);
+            AssetFileDescriptor assetFileDescriptorBg = getContext().getAssets().openFd(assetsFileNameBg);
+            mediaPlayerBg.setDataSource(assetFileDescriptorBg.getFileDescriptor(), assetFileDescriptorBg.getStartOffset(), assetFileDescriptorBg.getLength());
 
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-    }
-
-    public void setVideoByUrl(String url) {
-        reset();
-
-        try {
-            mediaPlayer.setDataSource(url);
-
-            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-            retriever.setDataSource(url, new HashMap<String, String>());
+            MediaMetadataRetriever retrieverBg = new MediaMetadataRetriever();
+            retrieverBg.setDataSource(assetFileDescriptorBg.getFileDescriptor(), assetFileDescriptorBg.getStartOffset(), assetFileDescriptorBg.getLength());
 
             onDataSourceSet(retriever);
 
         } catch (IOException e) {
             Log.e(TAG, e.getMessage(), e);
         }
+
+//        moviePath = getContext().getFilesDir().getAbsolutePath() + File.separator + assetsFileName;
+//        movieBgPath = getContext().getFilesDir().getAbsolutePath() + File.separator + assetsFileNameBg;
+//        isDataSourceSet = true;
+//
+//        if (isSurfaceCreated) {
+//            prepareAndStartMediaPlayer();
+//        }
     }
 
-    public void setVideoFromFile(FileDescriptor fileDescriptor) {
-        reset();
+    private static class PlayMovieThread extends Thread {
+        private final File mFile;
+        private final Surface mSurface;
+        private final SpeedControlCallback mCallback;
+        private MoviePlayer mMoviePlayer;
 
-        try {
-            mediaPlayer.setDataSource(fileDescriptor);
+        /**
+         * Creates thread and starts execution.
+         * <p>
+         * The object takes ownership of the Surface, and will access it from the new thread.
+         * When playback completes, the Surface will be released.
+         */
+        public PlayMovieThread(File file, Surface surface, SpeedControlCallback callback) {
+            mFile = file;
+            mSurface = surface;
+            mCallback = callback;
 
-            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-            retriever.setDataSource(fileDescriptor);
+            start();
+        }
 
-            onDataSourceSet(retriever);
+        /**
+         * Asks MoviePlayer to halt playback.  Returns without waiting for playback to halt.
+         * <p>
+         * Call from UI thread.
+         */
+        public void requestStop() {
+            mMoviePlayer.requestStop();
+        }
 
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
+        @Override
+        public void run() {
+            try {
+                mMoviePlayer = new MoviePlayer(mFile, mSurface, mCallback);
+                mMoviePlayer.setLoopMode(true);
+                mMoviePlayer.play();
+            } catch (IOException ioe) {
+                Log.e(TAG, "movie playback failed", ioe);
+            } finally {
+                mSurface.release();
+                Log.d(TAG, "PlayMovieThread stopping");
+            }
         }
     }
 
-    public void setVideoFromFile(FileDescriptor fileDescriptor, int startOffset, int endOffset) {
-        reset();
-
-        try {
-            mediaPlayer.setDataSource(fileDescriptor, startOffset, endOffset);
-
-            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-            retriever.setDataSource(fileDescriptor, startOffset, endOffset);
-
-            onDataSourceSet(retriever);
-
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-    }
-
-    @TargetApi(23)
-    public void setVideoFromMediaDataSource(MediaDataSource mediaDataSource) {
-        reset();
-
-        mediaPlayer.setDataSource(mediaDataSource);
-
-        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-        retriever.setDataSource(mediaDataSource);
-
-        onDataSourceSet(retriever);
-    }
-
-    public void setVideoFromUri(Context context, Uri uri) {
-        reset();
-
-        try {
-            mediaPlayer.setDataSource(context, uri);
-
-            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-            retriever.setDataSource(context, uri);
-
-            onDataSourceSet(retriever);
-        } catch (IOException e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
-    }
+//    public void setVideoByUrl(String url) {
+//        reset();
+//
+//        try {
+//            mediaPlayer.setDataSource(url);
+//
+//            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+//            retriever.setDataSource(url, new HashMap<String, String>());
+//
+//            onDataSourceSet(retriever);
+//
+//        } catch (IOException e) {
+//            Log.e(TAG, e.getMessage(), e);
+//        }
+//    }
+//
+//    public void setVideoFromFile(FileDescriptor fileDescriptor) {
+//        reset();
+//
+//        try {
+//            mediaPlayer.setDataSource(fileDescriptor);
+//
+//            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+//            retriever.setDataSource(fileDescriptor);
+//
+//            onDataSourceSet(retriever);
+//
+//        } catch (IOException e) {
+//            Log.e(TAG, e.getMessage(), e);
+//        }
+//    }
+//
+//    public void setVideoFromFile(FileDescriptor fileDescriptor, int startOffset, int endOffset) {
+//        reset();
+//
+//        try {
+//            mediaPlayer.setDataSource(fileDescriptor, startOffset, endOffset);
+//
+//            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+//            retriever.setDataSource(fileDescriptor, startOffset, endOffset);
+//
+//            onDataSourceSet(retriever);
+//
+//        } catch (IOException e) {
+//            Log.e(TAG, e.getMessage(), e);
+//        }
+//    }
+//
+//    @TargetApi(23)
+//    public void setVideoFromMediaDataSource(MediaDataSource mediaDataSource) {
+//        reset();
+//
+//        mediaPlayer.setDataSource(mediaDataSource);
+//
+//        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+//        retriever.setDataSource(mediaDataSource);
+//
+//        onDataSourceSet(retriever);
+//    }
+//
+//    public void setVideoFromUri(Context context, Uri uri) {
+//        reset();
+//
+//        try {
+//            mediaPlayer.setDataSource(context, uri);
+//
+//            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+//            retriever.setDataSource(context, uri);
+//
+//            onDataSourceSet(retriever);
+//        } catch (IOException e) {
+//            Log.e(TAG, e.getMessage(), e);
+//        }
+//    }
 
     @Override
     public void onResume() {
@@ -282,7 +394,7 @@ public class AlphaMovieView extends GLTextureView {
     @Override
     public void onPause() {
         super.onPause();
-        pause();
+//        pause();
     }
 
     @Override
@@ -305,40 +417,103 @@ public class AlphaMovieView extends GLTextureView {
         }
     }
 
+    private void prepareAsyncBg(final MediaPlayer.OnPreparedListener onPreparedListener) {
+        if (mediaPlayerBg != null && stateBg == PlayerState.NOT_PREPARED
+                || stateBg == PlayerState.STOPPED) {
+            mediaPlayerBg.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp) {
+                    stateBg = PlayerState.PREPARED;
+                    onPreparedListener.onPrepared(mp);
+                }
+            });
+            mediaPlayerBg.prepareAsync();
+        }
+    }
+
     public void start() {
-        if (mediaPlayer != null) {
-            switch (state) {
-                case PREPARED:
-                    mediaPlayer.start();
-                    state = PlayerState.STARTED;
-                    if (onVideoStartedListener != null) {
-                        onVideoStartedListener.onVideoStarted();
-                    }
-                    break;
-                case PAUSED:
-                    mediaPlayer.start();
-                    state = PlayerState.STARTED;
-                    break;
-                case STOPPED:
-                    prepareAsync(new MediaPlayer.OnPreparedListener() {
-                        @Override
-                        public void onPrepared(MediaPlayer mp) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (mediaPlayer != null) {
+                    switch (state) {
+                        case PREPARED:
                             mediaPlayer.start();
                             state = PlayerState.STARTED;
                             if (onVideoStartedListener != null) {
                                 onVideoStartedListener.onVideoStarted();
                             }
-                        }
-                    });
-                    break;
+                            break;
+                        case PAUSED:
+                            mediaPlayer.start();
+                            state = PlayerState.STARTED;
+                            break;
+                        case STOPPED:
+                            prepareAsync(new MediaPlayer.OnPreparedListener() {
+                                @Override
+                                public void onPrepared(MediaPlayer mp) {
+                                    mediaPlayer.start();
+                                    state = PlayerState.STARTED;
+                                    if (onVideoStartedListener != null) {
+                                        onVideoStartedListener.onVideoStarted();
+                                    }
+                                }
+                            });
+                            break;
+                    }
+                }
             }
-        }
+        }).start();
+
+    }
+
+    public void startBg() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (mediaPlayerBg != null) {
+                    switch (stateBg) {
+                        case PREPARED:
+                            mediaPlayerBg.start();
+                            stateBg = PlayerState.STARTED;
+//                    if (onVideoStartedListener != null) {
+//                        onVideoStartedListener.onVideoStarted();
+//                    }
+                            break;
+                        case PAUSED:
+                            mediaPlayerBg.start();
+                            stateBg = PlayerState.STARTED;
+                            break;
+                        case STOPPED:
+                            prepareAsyncBg(new MediaPlayer.OnPreparedListener() {
+                                @Override
+                                public void onPrepared(MediaPlayer mp) {
+                                    mediaPlayerBg.start();
+                                    stateBg = PlayerState.STARTED;
+//                            if (onVideoStartedListener != null) {
+//                                onVideoStartedListener.onVideoStarted();
+//                            }
+                                }
+                            });
+                            break;
+                    }
+                }
+            }
+        }).start();
+
     }
 
     public void pause() {
         if (mediaPlayer != null && state == PlayerState.STARTED) {
             mediaPlayer.pause();
             state = PlayerState.PAUSED;
+        }
+    }
+
+    public void pauseBg() {
+        if (mediaPlayerBg != null && stateBg == PlayerState.STARTED) {
+            mediaPlayerBg.pause();
+            stateBg = PlayerState.PAUSED;
         }
     }
 
@@ -349,11 +524,24 @@ public class AlphaMovieView extends GLTextureView {
         }
     }
 
+    public void stopBg() {
+        if (mediaPlayerBg != null && (stateBg == PlayerState.STARTED || stateBg == PlayerState.PAUSED)) {
+            mediaPlayerBg.stop();
+            stateBg = PlayerState.STOPPED;
+        }
+    }
+
     public void reset() {
         if (mediaPlayer != null && (state == PlayerState.STARTED || state == PlayerState.PAUSED ||
                 state == PlayerState.STOPPED)) {
             mediaPlayer.reset();
             state = PlayerState.NOT_PREPARED;
+        }
+
+        if (mediaPlayerBg != null && (stateBg == PlayerState.STARTED || stateBg == PlayerState.PAUSED ||
+                stateBg == PlayerState.STOPPED)) {
+            mediaPlayerBg.reset();
+            stateBg = PlayerState.NOT_PREPARED;
         }
     }
 
@@ -362,59 +550,63 @@ public class AlphaMovieView extends GLTextureView {
             mediaPlayer.release();
             state = PlayerState.RELEASE;
         }
+        if (mediaPlayerBg != null) {
+            mediaPlayerBg.release();
+            stateBg = PlayerState.RELEASE;
+        }
     }
 
-    public PlayerState getState() {
-        return state;
-    }
-
-    public boolean isPlaying() {
-        return state == PlayerState.STARTED;
-    }
-
-    public boolean isPaused() {
-        return state == PlayerState.PAUSED;
-    }
-
-    public boolean isStopped() {
-        return state == PlayerState.STOPPED;
-    }
-
-    public boolean isReleased() {
-        return state == PlayerState.RELEASE;
-    }
-
-    public void seekTo(int msec) {
-        mediaPlayer.seekTo(msec);
-    }
-
-    public void setLooping(boolean looping) {
-        mediaPlayer.setLooping(looping);
-    }
-
-    public int getCurrentPosition() {
-        return mediaPlayer.getCurrentPosition();
-    }
-
-    public void setScreenOnWhilePlaying(boolean screenOn) {
-        mediaPlayer.setScreenOnWhilePlaying(screenOn);
-    }
-
-    public void setOnErrorListener(MediaPlayer.OnErrorListener onErrorListener){
-        mediaPlayer.setOnErrorListener(onErrorListener);
-    }
-
-    public void setOnVideoStartedListener(OnVideoStartedListener onVideoStartedListener) {
-        this.onVideoStartedListener = onVideoStartedListener;
-    }
-
-    public void setOnVideoEndedListener(OnVideoEndedListener onVideoEndedListener) {
-        this.onVideoEndedListener = onVideoEndedListener;
-    }
-
-    public void setOnSeekCompleteListener(MediaPlayer.OnSeekCompleteListener onSeekCompleteListener) {
-        mediaPlayer.setOnSeekCompleteListener(onSeekCompleteListener);
-    }
+//    public PlayerState getState() {
+//        return state;
+//    }
+//
+//    public boolean isPlaying() {
+//        return state == PlayerState.STARTED;
+//    }
+//
+//    public boolean isPaused() {
+//        return state == PlayerState.PAUSED;
+//    }
+//
+//    public boolean isStopped() {
+//        return state == PlayerState.STOPPED;
+//    }
+//
+//    public boolean isReleased() {
+//        return state == PlayerState.RELEASE;
+//    }
+//
+//    public void seekTo(int msec) {
+//        mediaPlayer.seekTo(msec);
+//    }
+//
+//    public void setLooping(boolean looping) {
+//        mediaPlayer.setLooping(looping);
+//    }
+//
+//    public int getCurrentPosition() {
+//        return mediaPlayer.getCurrentPosition();
+//    }
+//
+//    public void setScreenOnWhilePlaying(boolean screenOn) {
+//        mediaPlayer.setScreenOnWhilePlaying(screenOn);
+//    }
+//
+//    public void setOnErrorListener(MediaPlayer.OnErrorListener onErrorListener){
+//        mediaPlayer.setOnErrorListener(onErrorListener);
+//    }
+//
+//    public void setOnVideoStartedListener(OnVideoStartedListener onVideoStartedListener) {
+//        this.onVideoStartedListener = onVideoStartedListener;
+//    }
+//
+//    public void setOnVideoEndedListener(OnVideoEndedListener onVideoEndedListener) {
+//        this.onVideoEndedListener = onVideoEndedListener;
+//    }
+//
+//    public void setOnSeekCompleteListener(MediaPlayer.OnSeekCompleteListener onSeekCompleteListener) {
+//        mediaPlayer.setOnSeekCompleteListener(onSeekCompleteListener);
+//    }
 
     public MediaPlayer getMediaPlayer() {
         return mediaPlayer;

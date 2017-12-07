@@ -30,6 +30,7 @@
             android:src="@drawable/court_blue"
             android:adjustViewBounds="true"
             android:scaleType="fitCenter"
+            android:visibility="gone"
             android:contentDescription="@null"/>
 
         <com.alphamovie.lib.AlphaMovieView
@@ -37,8 +38,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            custom:alphaColor="#00ff00"
-            custom:accuracy="0.4"/>
+            custom:alphaColor="#000000"
+            custom:accuracy="0.95"/>
     </FrameLayout>
 
     <LinearLayout
@@ -79,7 +80,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center">
+        android:gravity="center"
+        android:visibility="gone">
 
         <Button
             android:layout_width="wrap_content"
