@@ -67,72 +67,69 @@ class VideoRenderer implements GLSurfaceView.Renderer {
             + "precision mediump float;\n"
             + "varying vec2 vTextureCoord;\n"
             + "uniform samplerExternalOES sTexture;\n"
-//            + "uniform sampler2D sTexture;\n"
             + "uniform samplerExternalOES sTextureBg;\n"
-//            + "uniform sampler2D sTextureBg;\n"
-            + "varying mediump float text_alpha_out;\n"
+            + "uniform samplerExternalOES sTextureAlpha;\n"
+//            + "varying mediump float text_alpha_out;\n"
 
-            + "vec3 rgb2hsv(vec3 rgb)\n" +
-            "{\n" +
-            "\tfloat Cmax = max(rgb.r, max(rgb.g, rgb.b));\n" +
-            "\tfloat Cmin = min(rgb.r, min(rgb.g, rgb.b));\n" +
-            "    float delta = Cmax - Cmin;\n" +
-            "\n" +
-            "\tvec3 hsv = vec3(0., 0., Cmax);\n" +
-            "\t\n" +
-            "\tif (Cmax > Cmin)\n" +
-            "\t{\n" +
-            "\t\thsv.y = delta / Cmax;\n" +
-            "\n" +
-            "\t\tif (rgb.r == Cmax)\n" +
-            "\t\t\thsv.x = (rgb.g - rgb.b) / delta;\n" +
-            "\t\telse\n" +
-            "\t\t{\n" +
-            "\t\t\tif (rgb.g == Cmax)\n" +
-            "\t\t\t\thsv.x = 2. + (rgb.b - rgb.r) / delta;\n" +
-            "\t\t\telse\n" +
-            "\t\t\t\thsv.x = 4. + (rgb.r - rgb.g) / delta;\n" +
-            "\t\t}\n" +
-            "\t\thsv.x = fract(hsv.x / 6.);\n" +
-            "\t}\n" +
-            "\treturn hsv;\n" +
-            "}\n" +
-            "\n" +
-            "float chromaKey(vec3 color, float bgr, float bgg, float bgb)\n" +
-            "{\n" +
-            "\tvec3 backgroundColor = vec3(bgr, bgg, bgb);\n" +
-            "\tvec3 weights = vec3(4., 1., 2.);\n" +
-            "\n" +
-            "\tvec3 hsv = rgb2hsv(color);\n" +
-            "\tvec3 target = rgb2hsv(backgroundColor);\n" +
-            "\tfloat dist = length(weights * (target - hsv));\n" +
-            "\treturn 1. - clamp(3. * dist - 1.5, 0., 1.);\n" +
-            "}\n" +
-            "\n" +
-            "vec3 changeSaturation(vec3 color, float saturation)\n" +
-            "{\n" +
-            "\tfloat luma = dot(vec3(0.213, 0.715, 0.072) * color, vec3(1.));\n" +
-            "\treturn mix(vec3(luma), color, saturation);\n" +
-            "}"
+//            + "vec3 rgb2hsv(vec3 rgb)\n" +
+//            "{\n" +
+//            "\tfloat Cmax = max(rgb.r, max(rgb.g, rgb.b));\n" +
+//            "\tfloat Cmin = min(rgb.r, min(rgb.g, rgb.b));\n" +
+//            "    float delta = Cmax - Cmin;\n" +
+//            "\n" +
+//            "\tvec3 hsv = vec3(0., 0., Cmax);\n" +
+//            "\t\n" +
+//            "\tif (Cmax > Cmin)\n" +
+//            "\t{\n" +
+//            "\t\thsv.y = delta / Cmax;\n" +
+//            "\n" +
+//            "\t\tif (rgb.r == Cmax)\n" +
+//            "\t\t\thsv.x = (rgb.g - rgb.b) / delta;\n" +
+//            "\t\telse\n" +
+//            "\t\t{\n" +
+//            "\t\t\tif (rgb.g == Cmax)\n" +
+//            "\t\t\t\thsv.x = 2. + (rgb.b - rgb.r) / delta;\n" +
+//            "\t\t\telse\n" +
+//            "\t\t\t\thsv.x = 4. + (rgb.r - rgb.g) / delta;\n" +
+//            "\t\t}\n" +
+//            "\t\thsv.x = fract(hsv.x / 6.);\n" +
+//            "\t}\n" +
+//            "\treturn hsv;\n" +
+//            "}\n" +
+//            "\n" +
+//            "float chromaKey(vec3 color, float bgr, float bgg, float bgb)\n" +
+//            "{\n" +
+//            "\tvec3 backgroundColor = vec3(bgr, bgg, bgb);\n" +
+//            "\tvec3 weights = vec3(4., 1., 2.);\n" +
+//            "\n" +
+//            "\tvec3 hsv = rgb2hsv(color);\n" +
+//            "\tvec3 target = rgb2hsv(backgroundColor);\n" +
+//            "\tfloat dist = length(weights * (target - hsv));\n" +
+//            "\treturn 1. - clamp(3. * dist - 1.5, 0., 1.);\n" +
+//            "}\n" +
+//            "\n" +
+//            "vec3 changeSaturation(vec3 color, float saturation)\n" +
+//            "{\n" +
+//            "\tfloat luma = dot(vec3(0.213, 0.715, 0.072) * color, vec3(1.));\n" +
+//            "\treturn mix(vec3(luma), color, saturation);\n" +
+//            "}"
 
 
             + "void main() {\n"
             + "  vec4 color = texture2D(sTexture, vTextureCoord);\n"
             + "  vec4 colorBg = texture2D(sTextureBg, vTextureCoord);\n"
+            + "  vec4 colorAlpha = texture2D(sTextureAlpha, vTextureCoord);\n"
             + "  float red = %f;\n"
             + "  float green = %f;\n"
             + "  float blue = %f;\n"
             + "  float accuracy = %f;\n"
-            + "  if (abs(color.r - red) <= accuracy && abs(color.g - green) <= accuracy && abs(color.b - blue) <= accuracy) {\n"
-            + "      gl_FragColor = colorBg;\n"
-//            + "      gl_FragColor = mix(vec4(1.0, 0.5, 1.0, 1.0), color, 1.);\n"
-//            + "      gl_FragColor = vec4(1.0, 0.5, 1.0, 1.0);\n"
-            + "  } else {\n"
-//            + "      gl_FragColor = mix(vec4(color.r, color.g, color.b, 0.0), colorBg, 0.5);\n"
-            + "      gl_FragColor = color;\n"
-//            + "      gl_FragColor = mix(color, colorBg, 0.5);\n"
-//            + "      gl_FragColor = vec4(1.0, 1.0, 0.5, 1.0)\n"
-            + "  }\n"
+//            + "  if (abs(color.r - red) <= accuracy && abs(color.g - green) <= accuracy && abs(color.b - blue) <= accuracy) {\n"
+//            + "      gl_FragColor = colorBg;\n"
+//            + "  } else {\n"
+//            + "      gl_FragColor = color;\n"
+//            + "  }\n"
+            + "   gl_FragColor = mix(colorBg, color, colorAlpha.g);\n"
+//            + "  }\n"
 
 //            + "vec3 color = texture2D(sTexture, vTextureCoord).rgb;\n" +
 //            "vec3 colorBg = texture2D(sTextureBg, vTextureCoord).rgb;\n" +
@@ -155,19 +152,20 @@ class VideoRenderer implements GLSurfaceView.Renderer {
     private float[] sTMatrix = new float[16];
 
     private int program;
-    private int textureID;
-    private int textureBgID;
     private int uMVPMatrixHandle;
     private int uSTMatrixHandle;
     private int aPositionHandle;
     private int aTextureHandle;
 
-    private SurfaceTexture surface;
-    private SurfaceTexture surfaceBg;
+    private int textureID;
+    private int textureBgID;
+    private int textureAlphaID;
+    private SurfaceTexture surfaceTexture;
+    private SurfaceTexture surfaceTextureBg;
+    private SurfaceTexture surfaceTextureAlpha;
     private volatile boolean updateSurface = false;
     private volatile boolean updateSurfaceBg = false;
-
-    private static int GL_TEXTURE_EXTERNAL_OES = 0x8D65;
+    private volatile boolean updateSurfaceAlpha = false;
 
     private OnSurfacePrepareListener onSurfacePrepareListener;
 
@@ -188,18 +186,22 @@ class VideoRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(GL10 glUnused) {
-        Log.d("onDrawFrame", "onDrawFrame called");
+//        Log.d("onDrawFrame", "onDrawFrame called");
 //        synchronized(this) {
-//            if (updateSurface && updateSurfaceBg) {
+//            if (updateSurface && updateSurfaceBg && updateSurfaceAlpha) {
                 Log.d("onDrawFrame", "updateTexImage called");
-                surface.updateTexImage();
-                surface.getTransformMatrix(sTMatrix);
+                surfaceTexture.updateTexImage();
+                surfaceTexture.getTransformMatrix(sTMatrix);
                 updateSurface = false;
-//            }
-//            if (updateSurfaceBg) {
-                surfaceBg.updateTexImage();
-                surfaceBg.getTransformMatrix(sTMatrix);
+
+                surfaceTextureBg.updateTexImage();
+                surfaceTextureBg.getTransformMatrix(sTMatrix);
                 updateSurfaceBg = false;
+
+                surfaceTextureAlpha.updateTexImage();
+                surfaceTextureAlpha.getTransformMatrix(sTMatrix);
+                updateSurfaceAlpha = false;
+
 //            }
 //        }
         GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
@@ -213,15 +215,18 @@ class VideoRenderer implements GLSurfaceView.Renderer {
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureID);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureID);
         GLES20.glUniform1i(GLES20.glGetUniformLocation(program, "sTexture"), 0);
         checkGlError("glBindTexture textureID");
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureBgID);
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureBgID);
         GLES20.glUniform1i(GLES20.glGetUniformLocation(program, "sTextureBg"), 1);
         checkGlError("glBindTexture textureBgID");
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureAlphaID);
+        GLES20.glUniform1i(GLES20.glGetUniformLocation(program, "sTextureAlpha"), 2);
+        checkGlError("glBindTexture textureAlphaID");
 
         triangleVertices.position(TRIANGLE_VERTICES_DATA_POS_OFFSET);
         GLES20.glVertexAttribPointer(aPositionHandle, 3, GLES20.GL_FLOAT, false,
@@ -285,60 +290,78 @@ class VideoRenderer implements GLSurfaceView.Renderer {
     }
 
     private void prepareSurface() {
-        int[] textures = new int[2];
-        GLES20.glGenTextures(2, textures, 0);
+        int[] textures = new int[3];
+        GLES20.glGenTextures(3, textures, 0);
 
         GLES20.glUseProgram(program);
         checkGlError("glUseProgram");
 
         textureID = textures[0];
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glBindTexture(GL_TEXTURE_EXTERNAL_OES, textureID);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureID);
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureID);
         GLES20.glUniform1i(GLES20.glGetUniformLocation(program, "sTexture"), 0);
-        GLES20.glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER,
+        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER,
                 GLES20.GL_NEAREST);
-        GLES20.glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER,
+        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER,
                 GLES20.GL_LINEAR);
         checkGlError("glBindTexture textureID");
 
         textureBgID = textures[1];
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureBgID);
-        GLES20.glBindTexture(GL_TEXTURE_EXTERNAL_OES, textureBgID);
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureBgID);
         GLES20.glUniform1i(GLES20.glGetUniformLocation(program, "sTextureBg"), 1);
-        GLES20.glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER,
+        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER,
                 GLES20.GL_NEAREST);
-        GLES20.glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER,
+        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER,
                 GLES20.GL_LINEAR);
         checkGlError("glBindTexture textureBgID");
 
+        textureAlphaID = textures[2];
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureAlphaID);
+        GLES20.glUniform1i(GLES20.glGetUniformLocation(program, "sTextureAlpha"), 2);
+        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER,
+                GLES20.GL_NEAREST);
+        GLES20.glTexParameterf(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER,
+                GLES20.GL_LINEAR);
+        checkGlError("glBindTexture textureAlphaID");
 
-        surface = new SurfaceTexture(textureID);
-        surface.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
+        surfaceTexture = new SurfaceTexture(textureID);
+        surfaceTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
             @Override
             public void onFrameAvailable(SurfaceTexture surfaceTexture) {
-                Log.d("onDrawFrame", "surface onFrameAvailable ==");
+                Log.d("onDrawFrame", "surfaceTexture onFrameAvailable ==");
                 updateSurface = true;
             }
         });
-        Surface surface = new Surface(this.surface);
+        Surface surface = new Surface(this.surfaceTexture);
 
-        surfaceBg = new SurfaceTexture(textureBgID);
-        surfaceBg.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
+        surfaceTextureBg = new SurfaceTexture(textureBgID);
+        surfaceTextureBg.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
             @Override
             public void onFrameAvailable(SurfaceTexture surfaceTexture) {
-                Log.d("onDrawFrame", "surfaceBg onFrameAvailable ==bg");
+                Log.d("onDrawFrame", "surfaceTextureBg onFrameAvailable ==bg");
                 updateSurfaceBg = true;
             }
         });
-        Surface surfaceBg = new Surface(this.surfaceBg);
+        Surface surfaceBg = new Surface(this.surfaceTextureBg);
 
-        onSurfacePrepareListener.surfacePrepared(surface, surfaceBg);
+        surfaceTextureAlpha = new SurfaceTexture(textureAlphaID);
+        surfaceTextureAlpha.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
+            @Override
+            public void onFrameAvailable(SurfaceTexture surfaceTexture) {
+                Log.d("onDrawFrame", "surfaceTextureAlpha onFrameAvailable ==alpha");
+                updateSurfaceAlpha = true;
+            }
+        });
+        Surface surfaceAlpha = new Surface(this.surfaceTextureAlpha);
+
+        onSurfacePrepareListener.surfacePrepared(surface, surfaceBg, surfaceAlpha);
 
         synchronized(this) {
             updateSurface = false;
             updateSurfaceBg = false;
+            updateSurfaceAlpha = false;
         }
     }
 
@@ -430,7 +453,7 @@ class VideoRenderer implements GLSurfaceView.Renderer {
     }
 
     interface OnSurfacePrepareListener {
-        void surfacePrepared(Surface surface, Surface bgSurface);
+        void surfacePrepared(Surface surface, Surface bgSurface, Surface alphaSurface);
     }
 
 }

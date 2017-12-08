@@ -28,8 +28,9 @@ import com.alphamovie.lib.Utils;
 import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
-    public static final String FILENAME = "caffe-good.mp4";
-    public static final String FILENAMEBG = "caffe-base-good.mp4";
+    public static final String FILENAME = "color1.mp4";
+    public static final String FILENAMEBG = "base1.mp4";
+    public static final String FILENAMEALPHA = "alpha1.mp4";
 
     public static final int FIRST_BG_INDEX = 0;
     public static final int BG_ARRAY_LENGTH = 3;
@@ -52,11 +53,12 @@ public class MainActivity extends AppCompatActivity {
         String desPath = getFilesDir().getAbsolutePath() + File.separator;
         Utils.copyAssetFileToPath(this, FILENAME, desPath);
         Utils.copyAssetFileToPath(this, FILENAMEBG, desPath);
+        Utils.copyAssetFileToPath(this, FILENAMEALPHA, desPath);
 
         imageViewBackground = (ImageView) findViewById(R.id.image_background);
 
         alphaMovieView = (AlphaMovieView) findViewById(R.id.video_player);
-        alphaMovieView.setVideoFromAssets(FILENAME, FILENAMEBG);
+        alphaMovieView.setVideoFromAssets(FILENAME, FILENAMEBG, FILENAMEALPHA);
     }
 
     @Override
@@ -73,17 +75,14 @@ public class MainActivity extends AppCompatActivity {
 
     public void play(View view) {
         alphaMovieView.start();
-        alphaMovieView.startBg();
     }
 
     public void pause(View view) {
         alphaMovieView.pause();
-        alphaMovieView.pauseBg();
     }
 
     public void stop(View view) {
         alphaMovieView.stop();
-        alphaMovieView.stopBg();
     }
 
     public void changeBackground(View view) {
