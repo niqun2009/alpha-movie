@@ -1,7 +1,9 @@
 package com.alphamovie.lib;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.AssetManager;
+import android.util.DisplayMetrics;
 import android.util.Log;
 
 import java.io.File;
@@ -44,6 +46,12 @@ public class Utils {
         } catch (Throwable e) {
             Log.e("", e.getMessage());
         }
+    }
+
+    public static int getScreenWidth(Activity activity) {
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        return displayMetrics.widthPixels;
     }
 
 }
